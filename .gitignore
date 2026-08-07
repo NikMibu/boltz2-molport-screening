@@ -123,3 +123,19 @@ data/demo/*
 data/reference/*
 !data/reference/known_ca2_inhibitors.csv
 !data/reference/README.md
+
+# ---------------------------------------------------------------------------
+# Example outputs — produced from data/demo/, never from the screening library.
+# Same directory rule as above: re-including results/example/ does not
+# re-exclude what lands inside it, so the contents are listed by extension and
+# the proprietary patterns at the top of this file still win over *.csv here.
+# ---------------------------------------------------------------------------
+!results/
+results/*
+!results/example/
+results/example/*
+!results/example/**/
+!results/example/README.md
+!results/example/**/*.yaml
+!results/example/**/*.png
+!results/example/demo_*.csv

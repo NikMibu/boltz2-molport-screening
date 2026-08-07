@@ -21,6 +21,9 @@ Options:
                     Needs a SMILES column and an ID column.
   --config PATH     Pipeline config (default: screening/screening_config.yaml)
   --limit N         Only generate the first N YAMLs. For trying the wiring.
+  --smoke           Reduced run: the first smoke_n_compounds of the input at
+                    reduced inference parameters (see the config). Minutes
+                    instead of hours. Proves the chain runs; reproduces nothing.
   --skip-boltz      Generate YAMLs but stop before inference. Use when the GPU
                     run happens elsewhere.
   --analysis-only   Skip generation and inference, re-run ranking on existing
@@ -28,7 +31,7 @@ Options:
   -h, --help        Show this message and exit
 
 Examples:
-  bash run_screening.sh --target ca2 --limit 5 --skip-boltz
+  bash run_screening.sh --target ca2 --smoke
   bash run_screening.sh --target all
   bash run_screening.sh --target ca2 --analysis-only
 
@@ -48,6 +51,7 @@ EOF
 TARGET="ca2"
 INPUT_OVERRIDE=""
 LIMIT=""
+SMOKE=false
 SKIP_BOLTZ=false
 ANALYSIS_ONLY=false
 
@@ -61,6 +65,7 @@ while [ $# -gt 0 ]; do
         --config=*)       CONFIG="${1#*=}"; shift ;;
         --limit)          LIMIT="${2:?--limit requires a number}"; shift 2 ;;
         --limit=*)        LIMIT="${1#*=}"; shift ;;
+        --smoke)          SMOKE=true; shift ;;
         --skip-boltz)     SKIP_BOLTZ=true; shift ;;
         --analysis-only)  ANALYSIS_ONLY=true; shift ;;
         -h|--help)        usage; exit 0 ;;
@@ -123,6 +128,11 @@ if [ "$ANALYSIS_ONLY" = false ] && [ ! -f "$INPUT_CSV" ]; then
     echo "       This repository ships no screening library. Pass your own with" >&2
     echo "       --input, or build the demo set first (see data/demo/README.md)." >&2
     exit 1
+fi
+
+# --smoke caps the compound count too; an explicit --limit still wins.
+if [ "$SMOKE" = true ] && [ -z "$LIMIT" ]; then
+    LIMIT=$(read_cfg smoke_n_compounds)
 fi
 
 SMILES_COL=$(read_cfg smiles_column)
@@ -206,7 +216,9 @@ print(min(n, ${LIMIT:-n}) if '${LIMIT}' else n)
             continue
         fi
         log "--- Step 3: Boltz-2 inference ---"
-        bash "${SCREENING}/run_boltz.sh" "$CONFIG" "$T" 2>&1 | tee -a "$LOG_FILE"
+        SMOKE_ARG=""
+        [ "$SMOKE" = true ] && SMOKE_ARG="--smoke"
+        bash "${SCREENING}/run_boltz.sh" "$CONFIG" "$T" $SMOKE_ARG 2>&1 | tee -a "$LOG_FILE"
     fi
 
     # --- Step 4: Collect predictions ---

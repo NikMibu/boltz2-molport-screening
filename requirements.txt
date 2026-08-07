@@ -1,0 +1,48 @@
+# Python 3.10.12
+#
+#   python3 -m venv .venv && source .venv/bin/activate
+#   pip install -r requirements.txt
+#
+# Versions are those of the published run (thesis Table 3). Two of them are not
+# cosmetic:
+#
+#   rdkit    — NumHAcceptors and NumRotatableBonds changed between releases.
+#              Recomputing the 8,962-compound catalogue under 2026.03.5 shifts
+#              hba for 2.4 % of compounds. mw, heavy_atoms, logp, hbd and the
+#              PAINS flag are stable, and the size filter admits the same
+#              compounds either way — but the property table is not identical.
+#   pandas   — the ranking reads and writes CSVs throughout; major versions
+#              differ in NA handling and dtype inference.
+
+rdkit==2025.9.2
+pandas==2.3.3
+numpy==1.26.4
+matplotlib==3.10.7
+seaborn==0.13.2
+PyYAML==6.0.2
+requests==2.32.3
+
+# Reading vendor catalogues in .xlsx (00_characterize_dataset.py)
+openpyxl==3.1.5
+
+# Stripping HETATM records from the apo receptor (constraints/06_run_diffdock.py)
+biopython==1.85
+
+# Venn diagram in analyze_isoform_selectivity.py. Optional: the script warns and
+# skips that one figure if it is missing.
+matplotlib-venn==1.1.2
+
+# ---------------------------------------------------------------------------
+# Not installed here, on purpose
+# ---------------------------------------------------------------------------
+# boltz==2.2.1
+#   Pulls PyTorch and CUDA. Boltz-2 is commonly kept in its own environment;
+#   the wrappers take it from $BOLTZ_EXE and fall back to the PATH:
+#     export BOLTZ_EXE=/path/to/boltz-env/bin/boltz
+#   Install into this environment instead if you prefer a single one.
+#
+# DiffDock and PLIP
+#   Only needed for run_constraints.sh, and neither installs cleanly with pip:
+#   DiffDock needs the PyG wheel index for its +pt113cu117 packages, PLIP needs
+#   an OpenBabel build. Both are invoked through micromamba environments — see
+#   constraints/config.example.yaml. Run 'python3 validate_setup.py' to check.

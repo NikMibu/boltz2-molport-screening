@@ -36,7 +36,9 @@ one does not.
 | [`constraints/`](constraints/) | DiffDock poses, PLIP contacts, constrained re-scoring |
 | [`analysis/`](analysis/) | Novelty and property comparison of a hit list against known hCA II inhibitors |
 | [`data/`](data/README.md) | Target sequences, alignments, apo receptor, ChEMBL reference set, demo compounds |
+| [`results/example/`](results/example/README.md) | Input and output formats, produced from the demo set |
 | `validate_setup.py` | Checks Boltz-2, micromamba, DiffDock, PLIP and the FASTA/MSA pairing before a long run |
+| [`SMOKE_TEST.md`](SMOKE_TEST.md) | End-to-end check from a fresh clone, with the traps |
 
 > **No screening results are published here.** The predictions, rankings and hit
 > lists produced during the thesis are not part of this repository. What ships
@@ -48,6 +50,9 @@ one does not.
 ```bash
 # check the wiring: five compounds, one isoform, no GPU
 bash run_screening.sh --target ca2 --limit 5 --skip-boltz
+
+# five compounds through the GPU at reduced parameters, minutes
+bash run_screening.sh --target ca2 --smoke
 
 # the demo set against all three isoforms, end to end
 bash run_screening.sh --target all
@@ -190,8 +195,16 @@ named with `--score-col`; it is only used for the novelty-vs-score plot.
 
 ## Requirements
 
-Python 3.10, RDKit, pandas, numpy, matplotlib, seaborn, requests. No GPU for
-the analyses; the screening pipeline needs one.
+```bash
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+python3 validate_setup.py
+```
+
+Python 3.10. The analyses need no GPU; both pipelines do. `requirements.txt`
+pins the versions of the published run and explains why two of them matter.
+Boltz-2, DiffDock and PLIP are not installed by it — see the notes at the
+bottom of that file and [`SMOKE_TEST.md`](SMOKE_TEST.md).
 
 ## Related repositories
 

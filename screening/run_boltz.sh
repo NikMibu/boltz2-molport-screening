@@ -6,13 +6,14 @@ set -euo pipefail
 
 usage() {
     cat <<EOF
-Usage: bash screening/run_boltz.sh CONFIG TARGET
+Usage: bash screening/run_boltz.sh CONFIG TARGET [--smoke]
 
 Runs 'boltz predict' over the YAML folder for one target, using the inference
 parameters from CONFIG. Normally invoked by run_screening.sh.
 
   CONFIG    Pipeline config (e.g. screening/screening_config.yaml)
   TARGET    Target key from the config (ca2, ca4, ca7)
+  --smoke   Use the reduced smoke_* inference parameters
 
 The Boltz executable is taken from \$BOLTZ_EXE if set, otherwise 'boltz' on the
 PATH. Boltz-2 often lives in its own venv rather than on the PATH:
@@ -28,6 +29,10 @@ fi
 CONFIG="${1:?CONFIG required — see --help}"
 TARGET="${2:?TARGET required — see --help}"
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+
+# Prefix for the inference-parameter keys: "" (full run) or "smoke_"
+P=""
+[ "${3:-}" = "--smoke" ] && P="smoke_"
 
 read_cfg() {
     python3 - "$CONFIG" "$1" "${2:-}" <<'PY'
@@ -45,10 +50,10 @@ PY
 
 YAML_DIR="$ROOT/$(read_cfg yaml_dir "$TARGET")"
 RESULTS_DIR="$ROOT/$(read_cfg results_dir "$TARGET")"
-RECYCLING=$(read_cfg recycling_steps)
-SAMPLING=$(read_cfg sampling_steps)
-DIFF_SAMPLES_AFF=$(read_cfg diffusion_samples_affinity)
-SAMPLING_AFF=$(read_cfg sampling_steps_affinity)
+RECYCLING=$(read_cfg "${P}recycling_steps")
+SAMPLING=$(read_cfg "${P}sampling_steps")
+DIFF_SAMPLES_AFF=$(read_cfg "${P}diffusion_samples_affinity")
+SAMPLING_AFF=$(read_cfg "${P}sampling_steps_affinity")
 NO_KERNELS=$(read_cfg no_kernels)
 
 # Boltz has no --version; the executable is resolved here so that a missing
@@ -90,7 +95,7 @@ mkdir -p "$RESULTS_DIR"
 echo "Boltz:      $BOLTZ"
 echo "Input:      $YAML_DIR ($YAML_COUNT YAMLs)"
 echo "Output:     $RESULTS_DIR"
-echo "Parameters: ${RECYCLING}/${SAMPLING}/${DIFF_SAMPLES_AFF}/${SAMPLING_AFF}"
+echo "Parameters: ${RECYCLING}/${SAMPLING}/${DIFF_SAMPLES_AFF}/${SAMPLING_AFF}${P:+ (smoke)}"
 if [ ${#EXTRA[@]} -gt 0 ]; then
     echo "cuEquivariance kernels disabled (no_kernels: true)"
 fi

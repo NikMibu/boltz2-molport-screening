@@ -59,6 +59,17 @@ sampling_steps_affinity: 50
 # Leave false on native Linux and cloud GPUs.
 no_kernels: false
 
+# --- Smoke test (bash run_screening.sh --smoke) ---
+# Reduced parameters and a handful of compounds, so the chain can be exercised
+# in minutes instead of hours. The point is to prove the pipeline runs, not to
+# reproduce anything: at 1/10 the structures are poor and the affinities are
+# not comparable to a 2/50/1/50 run.
+smoke_n_compounds: 5
+smoke_recycling_steps: 1
+smoke_sampling_steps: 10
+smoke_diffusion_samples_affinity: 1
+smoke_sampling_steps_affinity: 10
+
 # --- Ranking (04_analyze_ligand_predictions.py) ---
 # Two-stage scoring:
 #   QC:    boltz_prob_mean >= confidence_threshold
