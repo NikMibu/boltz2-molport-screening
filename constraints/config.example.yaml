@@ -1,0 +1,117 @@
+# DiffDock + PLIP constraint pipeline — example configuration
+#
+# Copy to config.yaml and edit. config.yaml is gitignored, this file is not.
+#   cp constraints/config.example.yaml constraints/config.yaml
+#
+# Pipeline: SMILES -> 3D SDF -> DiffDock -> PLIP -> constraint YAMLs -> Boltz-2
+
+# --- Target ---
+target:
+  name: "CA2"
+  uniprot_id: "P00918"
+  fasta_path: "./data/fasta/P00918.fasta"
+  msa_path: "./data/msa/P00918.a3m"
+  protein_structure: "./data/pdb/1CNC.pdb"   # HETATM records are stripped
+
+# --- Input ---
+# In the thesis this is the top-100 list from the hCA II screen. That list is
+# derived from the proprietary library and is not shipped; point this at your
+# own ranking, or at the demo set.
+input:
+  csv_path: "./data/demo/demo_100.csv"
+  smiles_column: "smiles"
+  id_column: "molport_number"
+
+# --- Output ---
+output:
+  base_dir: "./results/constraints/ca2"
+  #   {base_dir}/sdf/      - 3D ligand structures
+  #   {base_dir}/docking/  - DiffDock poses
+  #   {base_dir}/plip/     - PLIP reports
+  #   {base_dir}/yamls/    - Boltz-2 inputs, two per compound
+
+# --- Ligand preparation (05) ---
+ligand_prep:
+  embed_random_seed: 42
+  optimize_geometry: true
+
+# --- DiffDock (06) ---
+diffdock:
+  # $DIFFDOCK_HOME takes precedence over this value. Leave the placeholder and
+  # export the variable instead:
+  #   export DIFFDOCK_HOME=/path/to/DiffDock
+  repo_path: "${DIFFDOCK_HOME}"
+  samples_per_complex: 40      # poses per ligand; the top-ranked one is kept
+  inference_steps: 20
+  actual_steps: 18
+  batch_size: 10
+  timeout: 600                 # per ligand, seconds
+
+# --- PLIP (07) ---
+plip:
+  timeout: 300
+  ignore_metal_interactions: true   # the catalytic Zn would otherwise dominate
+
+# --- Micromamba environments ---
+# DiffDock and PLIP each need their own environment; they are invoked as
+# 'micromamba run -n <env> ...'.
+#
+# Leave executable as the bare name unless micromamba lives somewhere unusual.
+# The lookup order is: this value if it contains a path separator, then
+# $MAMBA_EXE, then the PATH, then the usual install locations. The default
+# micromamba install defines a shell *function*, which subprocess cannot call —
+# so 'which micromamba' finding nothing does not mean it is missing. See
+# constraints/utils.py.
+micromamba:
+  executable: "micromamba"
+  diffdock_env: "diffdock"
+  plip_env: "plip"
+
+# --- Constraints (07) ---
+constraints:
+  # Distance written into the Boltz-2 pocket constraint, in Angstrom. This is
+  # NOT a PLIP detection cutoff: PLIP is invoked without any distance flag and
+  # runs at its own defaults, in this pipeline and in the co-crystal one.
+  #
+  # 6.0 is the value behind the published re-ranking — every pocket YAML of
+  # that run and every Boltz record carries 6.0. Section 5.7.3 of the thesis
+  # describes a relaxed 10 A for this experiment; the run artefacts do not
+  # support it. Kept at the value that was actually run.
+  max_distance: 6.0
+  constraint_types:
+    - "pocket"      # one constraint holding all contacts
+    #- "contact"    # one constraint per residue
+  generate_default: true    # also emit an unconstrained YAML per compound
+  ligand_id: "LIG"
+
+# --- Boltz-2 inference (run_constraints.sh) ---
+# 3/200/5/200 in the recycles/samples/affinity_recycles/affinity_samples
+# shorthand — the Boltz-2 defaults, as used for the constraint re-ranking in
+# Chapter 6.6. Note that this DIFFERS from the prospective screen in
+# screening/screening_config.yaml, which runs at the reduced 2/50/1/50: there
+# the input is ~9,000 compounds, here it is 100.
+recycling_steps: 3
+sampling_steps: 200
+diffusion_samples_affinity: 5
+sampling_steps_affinity: 200
+
+# Set true on WSL2 — the cuEquivariance kernels call nvmlDeviceGetNumGpuCores,
+# which NVML does not support there. Slower, same results.
+no_kernels: false
+
+# Reduced parameters for --smoke. Enough to prove the chain runs; not enough to
+# reproduce anything. Pose quality in particular collapses at low sampling.
+smoke_recycling_steps: 1
+smoke_sampling_steps: 10
+smoke_diffusion_samples_affinity: 1
+smoke_sampling_steps_affinity: 10
+smoke_samples_per_complex: 4     # DiffDock poses, instead of 40
+smoke_n_ligands: 3               # only the first N compounds of the input
+
+# --- Comparative analysis (08) ---
+# 0.6 as in the screening step. The argparse default inside
+# 08_analyze_constraint_predictions.py is 0.5; the wrapper always passes this
+# value explicitly.
+confidence_threshold: 0.6
+rank_by: "pocket"
+top_n: 100

@@ -86,8 +86,13 @@ data/*
 !data/reference/known_ca2_inhibitors.csv
 !data/reference/README.md
 
+# Re-including a directory does not re-exclude what is inside it: "data/*"
+# matches "data/fasta" but not "data/fasta/x". Each folder therefore needs its
+# own "<dir>/*" line before the allow-rules for the files that may pass.
+
 # Target sequences — UniProt
 !data/fasta/
+data/fasta/*
 !data/fasta/*.fasta
 
 # Alignments — generated from the public sequences above.
@@ -95,14 +100,23 @@ data/*
 # file, P22748_mit_Signal.a3m, belongs to the untrimmed hCA IV sequence
 # that was superseded and is deliberately left untracked.
 !data/msa/
+data/msa/*
 !data/msa/P00918.a3m
 !data/msa/P22748_mat.a3m
 !data/msa/P43166.a3m
 
 # Apo receptor for DiffDock — RCSB
 !data/pdb/
+data/pdb/*
 !data/pdb/1CNC.pdb
 
-# Demo compound set (Tag 8) — derived from data/reference/
+# Demo compound set — public vendor catalogue entries, see data/demo/README.md
 !data/demo/
+data/demo/*
 !data/demo/*.csv
+!data/demo/README.md
+
+# Reference set folder, same rule
+data/reference/*
+!data/reference/known_ca2_inhibitors.csv
+!data/reference/README.md
