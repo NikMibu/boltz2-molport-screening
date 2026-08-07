@@ -1,0 +1,73 @@
+# Configuration for run_screening.sh
+#
+# Paths are relative to the repository root. Placeholders {target} are filled
+# with the isoform key (ca2, ca4, ca7).
+
+# --- Input compound table ---
+# Any CSV with a SMILES column and an ID column. The MolPort natural-product
+# library used in the thesis is proprietary and is NOT shipped here; the demo
+# set below is a public stand-in drawn from data/reference/.
+input_csv: data/demo/demo_100.csv
+smiles_column: smiles
+id_column: compound_id
+
+# --- Targets ---
+# hCA IV is screened against the MATURE sequence: the N-terminal signal peptide
+# and the C-terminal GPI-anchor signal are trimmed (312 -> 266 residues), so
+# that prediction sees the membrane-anchored catalytic domain. The untrimmed
+# P22748.fasta is kept for provenance and is not used.
+targets:
+  ca2:
+    uniprot: P00918
+    fasta: data/fasta/P00918.fasta
+    msa: data/msa/P00918.a3m
+  ca4:
+    uniprot: P22748
+    fasta: data/fasta/P22748_mat.fasta
+    msa: data/msa/P22748_mat.a3m
+  ca7:
+    uniprot: P43166
+    fasta: data/fasta/P43166.fasta
+    msa: data/msa/P43166.a3m
+
+# --- Output directories ---
+yaml_dir: output/{target}/yamls          # generated Boltz-2 inputs
+results_dir: output/{target}/boltz_output # raw Boltz-2 predictions
+analysis_dir: results/{target}            # ranking, plots, summary CSV
+
+# --- Boltz-2 predict parameters ---
+# 2/50/1/50 in the recycles/samples/affinity_recycles/affinity_samples
+# shorthand. These are NOT the Boltz-2 defaults (3/200/5/200) — the prospective
+# screen in Chapter 6.4 was run with reduced "baseline" parameters, because
+# 8,963 compounds x 3 isoforms at the defaults is not affordable. The
+# constraint re-ranking of the top 100 (Chapter 6.6) does use the defaults;
+# see constraints/.
+#
+# Do not raise these to "improve" a reproduction run: the published rankings
+# only reproduce at 2/50/1/50.
+recycling_steps: 2
+sampling_steps: 50
+diffusion_samples_affinity: 1
+sampling_steps_affinity: 50
+
+# Set true on WSL2: Boltz's cuEquivariance kernels call nvmlDeviceGetNumGpuCores,
+# which NVML does not support there, and prediction crashes. Slower, same results.
+# Leave false on native Linux and cloud GPUs.
+no_kernels: false
+
+# --- Ranking (04_analyze_ligand_predictions.py) ---
+# Two-stage scoring:
+#   QC:    boltz_prob_mean >= confidence_threshold
+#   score: combined_score = boltz_pred_value_mean - 0.1 * boltz_prob_mean
+#          (lower is better; compounds failing QC get the sentinel 999)
+#
+# 0.6 is the threshold behind the published numbers. The argparse default in
+# 04_analyze_ligand_predictions.py is 0.5, which is NOT what the thesis used —
+# at 0.5 the QC-passing counts are 1504/1251/1736 instead of 597/419/710.
+confidence_threshold: 0.6
+top_n: 100
+
+# --- Size filters applied before ranking ---
+# Boltz-2's affinity module is not recommended above 56 heavy atoms.
+max_heavy_atoms: 56
+max_mw: 700

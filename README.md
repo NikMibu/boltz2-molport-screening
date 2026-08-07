@@ -12,14 +12,77 @@ followed by constraint-based re-ranking with DiffDock and PLIP.
 
 ## Status
 
-The screening and re-ranking pipeline (scripts `01`–`14`) is being migrated in.
-Currently available: the downstream analyses.
-
 | | |
 |---|---|
+| [`screening/`](screening/) | YAML generation, MSA injection, Boltz-2 inference, ranking, isoform selectivity |
 | [`analysis/`](analysis/) | Novelty and property comparison of a hit list against known hCA II inhibitors |
-| `screening/` | *to follow* — YAML generation, Boltz-2 inference, ranking |
+| [`data/`](data/README.md) | Target sequences, alignments, apo receptor, ChEMBL reference set |
 | `constraints/` | *to follow* — DiffDock poses, PLIP contacts, constrained re-scoring |
+
+## Screening
+
+```bash
+# one isoform, five compounds, no GPU — checks the wiring
+bash run_screening.sh --target ca2 --input my_compounds.csv --limit 5 --skip-boltz
+
+# all three isoforms, end to end
+bash run_screening.sh --target all --input my_compounds.csv
+```
+
+The wrapper runs YAML generation → MSA injection → `boltz predict` → prediction
+collection → ranking, per target. It answers `--help`, takes `--config`, and
+exits 2 on an unknown flag. Boltz-2 is taken from `$BOLTZ_EXE` if set, otherwise
+`boltz` on the `PATH`.
+
+**The input is yours to supply.** No compound library ships with this
+repository. Any CSV with a SMILES column and an ID column works; the columns
+are named in the config or auto-detected.
+
+### Scoring
+
+Two stages, both configurable in
+[`screening/screening_config.yaml`](screening/screening_config.yaml):
+
+1. **Quality control** — a compound must reach `boltz_prob_mean >= 0.6`.
+   Compounds below it receive the sentinel score 999 and drop out of the
+   ranking. A strong predicted affinity does not rescue a low-confidence
+   prediction.
+2. **Ranking** — `combined_score = boltz_pred_value_mean - 0.1 * boltz_prob_mean`,
+   **lower is better**.
+
+Before either stage, compounds above 56 heavy atoms or 700 Da are filtered out:
+Boltz-2's affinity module is not recommended beyond that size.
+
+> The argparse default inside `04_analyze_ligand_predictions.py` is `0.5`, not
+> `0.6`. The wrapper always passes the configured value. Running the script
+> directly without `--confidence-threshold` will not reproduce the published
+> counts.
+
+### Inference parameters
+
+The prospective screen uses **2/50/1/50** — recycling steps, sampling steps,
+affinity recycling steps, affinity sampling steps. These are *reduced* settings,
+not the Boltz-2 defaults of 3/200/5/200: a library of ~9,000 compounds against
+three isoforms is not affordable at the defaults. The constraint re-ranking of
+the top 100 does use the defaults.
+
+Reduced sampling costs pose quality. That is acceptable when the output is an
+affinity ranking, and not acceptable when the output is an RMSD — see the
+[sister repository](https://github.com/NikMibu/plip_constraints_pipeline) for
+what happens to pose accuracy at low sampling.
+
+### Targets
+
+| Key | Isoform | Sequence |
+|---|---|---|
+| `ca2` | hCA II | P00918, 260 aa |
+| `ca4` | hCA IV | P22748 **mature**, 266 aa — signal peptide and GPI-anchor signal trimmed |
+| `ca7` | hCA VII | P43166, 264 aa |
+
+Once all three are ranked, `screening/analyze_isoform_selectivity.py` compares
+the rank lists; `screening/14_plot_boltz_structure_quality.py` compares the
+structural confidence metrics across targets. Both take file paths and ship no
+data of their own.
 
 ## Analyses
 
