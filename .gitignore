@@ -1,0 +1,84 @@
+# ===============================================================
+# PROPRIETARY DATA — must never enter this repository
+# ===============================================================
+# This is a code-only repository. The MolPort Natural Products
+# library and every result derived from it (predictions, rankings,
+# hit lists) are proprietary and stay out of version control.
+#
+# Public reference data under data/reference/ is exempt; see the
+# explicit allow-rules at the bottom of this file.
+# ---------------------------------------------------------------
+molport_all.zip
+molport*.csv
+molport*.xlsx
+Molport*.zip
+Molport*.xlsx
+ligands_ranked*.csv
+*_with_predictions*.csv
+novelty_check_results.csv
+smiles_overlap.csv
+top100*.csv
+hits*.csv
+
+# ---------------------------------------------------------------
+# Data and model outputs
+# ---------------------------------------------------------------
+data/
+results/
+output/
+logging/
+*.log
+*.zip
+*.rar
+*.tar.gz
+*.a3m
+*.cif
+*.pdb
+*.npz
+*.ckpt
+*.pt
+*.sdf
+*.mol2
+
+# ---------------------------------------------------------------
+# Python
+# ---------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*.so
+.Python
+env/
+venv/
+.venv/
+*.egg-info/
+.ipynb_checkpoints/
+
+# ---------------------------------------------------------------
+# Local configuration (config.example.yaml is tracked)
+# ---------------------------------------------------------------
+config.yaml
+config.local.yaml
+*.yaml.bak
+.env
+
+# ---------------------------------------------------------------
+# IDE and OS
+# ---------------------------------------------------------------
+.vscode/
+.idea/
+*.swp
+*~
+.DS_Store
+Thumbs.db
+
+# ===============================================================
+# Allow-rules — MUST come last to override the exclusions above
+# ===============================================================
+# Public reference data only. Everything here must be traceable to
+# a public source (ChEMBL, UniProt, PDB) and carry a provenance note
+# in data/reference/README.md.
+!data/
+data/*
+!data/reference/
+!data/reference/known_ca2_inhibitors.csv
+!data/reference/README.md
