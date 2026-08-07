@@ -197,7 +197,11 @@ if has_step boltz; then
         exit 1
     fi
 
-    YAML_COUNT=$(find "${BASE_DIR}/yamls" -name '*.yaml' 2>/dev/null | wc -l)
+    if [ -d "${BASE_DIR}/yamls" ]; then
+        YAML_COUNT=$(find "${BASE_DIR}/yamls" -name '*.yaml' 2>/dev/null | wc -l)
+    else
+        YAML_COUNT=0
+    fi
     if [ "$YAML_COUNT" -eq 0 ]; then
         log "ERROR: no YAMLs in ${BASE_DIR}/yamls — run the plip step first."
         exit 1

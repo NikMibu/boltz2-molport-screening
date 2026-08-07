@@ -79,7 +79,7 @@ if [ ! -d "$YAML_DIR" ]; then
     echo "       Run 01_generate_yamls.py first." >&2
     exit 1
 fi
-YAML_COUNT=$(find "$YAML_DIR" -name '*.yaml' | wc -l)
+YAML_COUNT=$(find "$YAML_DIR" -name '*.yaml' 2>/dev/null | wc -l || true)
 if [ "$YAML_COUNT" -eq 0 ]; then
     echo "ERROR: no .yaml files in $YAML_DIR" >&2
     exit 1

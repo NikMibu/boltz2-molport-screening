@@ -147,6 +147,14 @@ mkdir -p "$LOG_DIR"
 LOG_FILE="${LOG_DIR}/screening_$(date +%Y%m%d_%H%M%S).log"
 log() { echo "[$(date '+%H:%M:%S')] $*" | tee -a "$LOG_FILE"; }
 
+# 'find' on a missing directory exits 1, and under 'set -o pipefail' that kills
+# the script silently mid-pipeline. On a fresh clone the output folders do not
+# exist yet, so every count has to tolerate that.
+count_yamls() {
+    [ -d "$1" ] || { echo 0; return 0; }
+    find "$1" -name '*.yaml' 2>/dev/null | wc -l
+}
+
 START_TIME=$(date +%s)
 log "=== Boltz-2 screening started ==="
 log "Config:  $CONFIG"
@@ -173,10 +181,6 @@ for T in $TARGETS; do
 
         # --- Step 1: Generate YAMLs ---
         log "--- Step 1: YAML generation ---"
-        # Nothing clears the folder, and boltz predicts everything it finds.
-        # YAMLs left over from an earlier input would be predicted alongside
-        # the current one and then show up as unmatched in step 4.
-        STALE_BEFORE=$(find "$YAML_DIR" -name '*.yaml' 2>/dev/null | wc -l)
         YAML_CMD=(python3 "${SCREENING}/01_generate_yamls.py"
                   --smiles-csv "$INPUT_CSV"
                   --smiles-column "$SMILES_COL"
@@ -196,7 +200,10 @@ for T in $TARGETS; do
         log "--- Step 2: MSA paths ---"
         python3 "${SCREENING}/02_update_msa.py" "$YAML_DIR" "$MSA" 2>&1 | tee -a "$LOG_FILE"
 
-        YAML_COUNT=$(find "$YAML_DIR" -name '*.yaml' | wc -l)
+        # Nothing clears the folder, and boltz predicts everything it finds.
+        # YAMLs left over from an earlier input would be predicted alongside
+        # the current one and then show up as unmatched in step 4.
+        YAML_COUNT=$(count_yamls "$YAML_DIR")
         log "$YAML_COUNT YAML(s) ready"
 
         EXPECTED=$(python3 -c "
