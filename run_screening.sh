@@ -174,10 +174,13 @@ for T in $TARGETS; do
         "${YAML_CMD[@]}" 2>&1 | tee -a "$LOG_FILE"
 
         # --- Step 2: MSA paths ---
-        # 01 already writes the MSA path. This re-points YAMLs that were
-        # generated elsewhere and still carry a foreign absolute path.
+        # The alignments are pre-computed locally rather than fetched per run
+        # with --use_msa_server. YAMLs hold an absolute path to the .a3m, so
+        # this step brings the whole folder up to date with wherever the
+        # alignment currently lives — including YAMLs generated on another
+        # machine, which is the normal case for a server run.
         log "--- Step 2: MSA paths ---"
-        python3 "${SCREENING}/02_update_msa.py" "$YAML_DIR" "$MSA" --replace 2>&1 | tee -a "$LOG_FILE"
+        python3 "${SCREENING}/02_update_msa.py" "$YAML_DIR" "$MSA" 2>&1 | tee -a "$LOG_FILE"
 
         YAML_COUNT=$(find "$YAML_DIR" -name '*.yaml' | wc -l)
         log "$YAML_COUNT YAML(s) ready"

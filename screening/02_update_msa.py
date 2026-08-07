@@ -1,16 +1,21 @@
 #!/usr/bin/env python3
-"""Point Boltz-2 input YAMLs at a pre-computed MSA.
+"""Point Boltz-2 input YAMLs at a locally pre-computed MSA.
 
-Handles three cases:
+Boltz-2 can fetch an alignment per run with ``--use_msa_server``. This pipeline
+does not: the alignments are generated once with ColabFold and stored as .a3m,
+so that every compound in a batch sees an identical MSA and a screen of
+thousands of ligands does not make one server round trip per ligand.
 
-1. ``msa: empty``      -> replaced with the given path
-2. no ``msa:`` field   -> a line is inserted after the protein sequence
-3. an ``msa:`` path is already present -> skipped, unless ``--replace``
+That choice only holds if every YAML carries a valid path to the .a3m, which is
+what this script maintains. A YAML holds an *absolute* path, so the moment the
+alignments move — another machine, a different checkout, a server run — the
+whole set has to be repointed.
 
-Case 3 matters more than it looks. YAMLs generated on another machine carry an
-absolute MSA path that does not exist here; skipping them leaves the whole set
-pointing at nothing and Boltz-2 only finds out at run time. Those files are
-therefore reported explicitly, with the path they currently hold.
+Three cases:
+
+1. no ``msa:`` field   -> a line is inserted after the protein sequence
+2. ``msa: empty``      -> replaced with the given path
+3. a different path    -> replaced, unless ``--keep-existing``
 """
 import argparse
 import re
@@ -68,19 +73,22 @@ def main() -> int:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 examples:
-  # add the MSA to freshly generated YAMLs
+  # point a folder of YAMLs at a local alignment
   python 02_update_msa.py output/ca2/yamls data/msa/P00918.a3m
 
-  # repoint YAMLs that already carry a path from another machine
-  python 02_update_msa.py output/ca2/yamls data/msa/P00918.a3m --replace
+  # only fill in YAMLs that carry no MSA at all, leave existing paths alone
+  python 02_update_msa.py output/ca2/yamls data/msa/P00918.a3m --keep-existing
+
+Paths are written absolute, because that is what Boltz-2 resolves them as.
+Re-run this after moving the repository or the alignments.
 """,
     )
     ap.add_argument("yaml_dir", help="Directory containing the .yaml files")
     ap.add_argument("msa_path", help="Path to the .a3m alignment")
     ap.add_argument(
-        "--replace",
+        "--keep-existing",
         action="store_true",
-        help="Overwrite an MSA path that is already present (default: leave it alone)",
+        help="Do not touch YAMLs that already name a different MSA; report them instead",
     )
     ap.add_argument(
         "--relative",
@@ -120,7 +128,7 @@ examples:
             if current == str(msa_path):
                 unchanged += 1
                 continue
-            if not args.replace:
+            if args.keep_existing:
                 stale.append((yaml_file.name, current))
                 continue
             new_content = replace_existing_msa(content, str(msa_path))
@@ -148,8 +156,8 @@ examples:
     if stale:
         shown = stale[:3]
         print(
-            f"\nWARNING: {len(stale)} file(s) already carry a different MSA path and were "
-            f"left untouched:",
+            f"\nWARNING: --keep-existing left {len(stale)} file(s) pointing at a "
+            f"different MSA:",
             file=sys.stderr,
         )
         for name, current in shown:
@@ -157,8 +165,8 @@ examples:
         if len(stale) > len(shown):
             print(f"  ... and {len(stale) - len(shown)} more", file=sys.stderr)
         print(
-            "Those paths are not checked for existence. If they come from another "
-            "machine, Boltz-2 will fail at run time — re-run with --replace.",
+            "Those paths are not checked for existence. If they came from another "
+            "machine, Boltz-2 will fail at run time — re-run without --keep-existing.",
             file=sys.stderr,
         )
 
