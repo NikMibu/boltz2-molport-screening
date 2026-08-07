@@ -45,14 +45,6 @@ one does not.
 > is the code and a 100-compound demo set so that both pipelines can be run
 > without a library of your own — see [`data/demo/`](data/demo/README.md).
 
-The thesis also had a set of one-off scripts that produced the figures of its
-results chapter: parsing a purchase order, picking six compounds for a panel,
-rendering PyMOL scenes, laying tables out as images. Those are not here. They
-were written against a directory tree that no longer exists and answer no
-question a reader of this repository has. What was general in them — the
-chemical-space map, the contact matrix, and the mmCIF-to-PDB conversion — was
-lifted out into `analysis/hit_profile.py` and `constraints/cif_to_pdb.py`.
-
 ## Screening
 
 ```bash
@@ -150,11 +142,12 @@ bash run_constraints.sh                         # the real thing
 | PLIP contacts → two YAMLs per compound | `07_generate_constraint_yamls.py` |
 | Compare the two rankings | `08_analyze_constraint_predictions.py` |
 
-`constraints/cif_to_pdb.py` is a standalone helper for the other direction:
-Boltz-2 writes predicted complexes as mmCIF, PLIP reads PDB, and PDB allows one
-character per chain — Boltz chain names do not fit and the ligand is lost
-without renaming. Needed to run PLIP on a Boltz-2 prediction; the pipeline above
-runs it on DiffDock poses, which are already PDB.
+`constraints/cif_to_pdb.py` opens up the other direction. Boltz-2 writes
+predicted complexes as mmCIF; PDB is what the tools downstream of it want — a
+structure viewer such as ChimeraX or PyMOL to inspect a pose, or PLIP to profile
+one. PDB allows a single character per chain, and Boltz names the ligand chain
+after the YAML ligand id, so without renaming the ligand is dropped and you are
+left looking at a bare protein.
 
 Inference here runs at **3/200/5/200**, the Boltz-2 defaults — not the reduced
 settings of the screening stage. A hundred compounds can afford what nine

@@ -1,19 +1,23 @@
 #!/usr/bin/env python3
-"""Convert Boltz-2 mmCIF output to PDB that PLIP can read.
+"""Convert a Boltz-2 mmCIF prediction to PDB.
 
-Boltz-2 writes predicted complexes as mmCIF. PLIP reads PDB, and the PDB format
-allots exactly one character to the chain identifier — Boltz chain names such as
-``L4635`` do not fit and are silently truncated or dropped, which loses the
-ligand.
+Boltz-2 writes predicted complexes as mmCIF. PDB is what the tools downstream of
+it expect — a viewer such as ChimeraX or PyMOL to look at a pose, or PLIP to
+profile its interactions.
 
-This renames every chain to a single character before writing, preferring to
-keep names that already fit and mapping the ligand chain (Boltz names it with a
-leading ``R``) to ``L``, which is the chain PLIP reports the ligand under
-elsewhere in this pipeline.
+The catch is the chain identifier. PDB allots it a single character, and Boltz
+names the ligand chain after the ligand id in the input YAML, which
+01_generate_yamls.py writes as L1, L2, ... — or L4635 in a large run. Those
+names do not fit, so a naive conversion drops the ligand and leaves a bare
+protein that looks fine until you notice nothing is bound.
 
-Needed whenever PLIP is run on a Boltz-2 prediction rather than on a docked
-pose: 07_generate_constraint_yamls.py works on DiffDock output, which is already
-PDB, so it does not use this.
+Every chain is therefore renamed to one character first, keeping the leading
+character where it is free. The ligand keeps chain L, which is where PLIP
+reports it elsewhere in this pipeline.
+
+Not part of run_constraints.sh: that pipeline runs PLIP on DiffDock poses, which
+are already PDB. This is for looking at, or profiling, what Boltz-2 itself
+predicted.
 """
 import argparse
 import os
@@ -82,14 +86,15 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 examples:
-  # one file
+  # one pose, to open in ChimeraX or PyMOL
   python constraints/cif_to_pdb.py --input pred.cif --output pred.pdb
 
   # every prediction of a Boltz run
   python constraints/cif_to_pdb.py --input results/.../boltz_output --out-dir pdb/
 
 PDB allows one character per chain. Boltz chain names are longer, so they are
-renamed; the ligand chain becomes L.
+renamed; the ligand chain becomes L. Without that the ligand is dropped and the
+file opens as a bare protein.
 """,
     )
     ap.add_argument("--input", required=True,
