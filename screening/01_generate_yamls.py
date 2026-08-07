@@ -188,6 +188,7 @@ limit. The compound ID goes into the filename, which is what
     n = 0
     active_counter = 0
     decoy_counter = 0
+    multi_fragment = []
 
     # Process CSV input and actives through the same branch: both are "L" ligands
     if args.smiles_csv:
@@ -202,6 +203,9 @@ limit. The compound ID goes into the filename, which is what
             if not smiles:
                 continue
             
+            if "." in smiles:
+                multi_fragment.append((mol_id or f"L{active_counter + 1}", smiles))
+
             active_counter += 1
             raw_ligand_id = f"L{active_counter}"
             ligand_id = shorten_chain_id(raw_ligand_id)
@@ -232,6 +236,9 @@ limit. The compound ID goes into the filename, which is what
             if not smiles:
                 continue
             
+            if "." in smiles:
+                multi_fragment.append((mol_id or f"Z{decoy_counter + 1}", smiles))
+
             decoy_counter += 1
             raw_ligand_id = f"Z{decoy_counter}"
             ligand_id = shorten_chain_id(raw_ligand_id)
@@ -261,6 +268,27 @@ limit. The compound ID goes into the filename, which is what
             file=sys.stderr,
         )
         return 1
+
+    if multi_fragment:
+        shown = multi_fragment[:3]
+        print(
+            f"\nWARNING: {len(multi_fragment)} SMILES contain more than one fragment "
+            f"(a '.'), typically a salt:",
+            file=sys.stderr,
+        )
+        for mol_id, smiles in shown:
+            print(f"  {mol_id}: {smiles[:70]}", file=sys.stderr)
+        if len(multi_fragment) > len(shown):
+            print(f"  ... and {len(multi_fragment) - len(shown)} more", file=sys.stderr)
+        print(
+            "Boltz-2 2.2.1 reduces these to the largest fragment and can abort while\n"
+            "doing so ('getNumImplicitHs() called without preceding call to\n"
+            "calcImplicitValence()'). It skips the input and carries on, so the\n"
+            "compound silently drops out of the ranking. In the run behind this\n"
+            "pipeline every one of the 306 multi-fragment entries came back empty.\n"
+            "Desalt beforehand if you need them predicted.",
+            file=sys.stderr,
+        )
 
     if args.smiles_csv:
         print(f"Wrote {n} YAML file(s) to {args.outdir}")

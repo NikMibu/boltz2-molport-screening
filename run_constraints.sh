@@ -212,6 +212,10 @@ if has_step boltz; then
     if [ "$NO_KERNELS" = "True" ] || [ "$NO_KERNELS" = "true" ]; then
         EXTRA+=(--no_kernels)
         log "cuEquivariance kernels disabled (no_kernels: true)"
+    elif grep -qi microsoft /proc/version 2>/dev/null; then
+        log "WARNING: this looks like WSL and no_kernels is false. Boltz's"
+        log "         cuEquivariance kernels crash there with NVMLError_NotSupported"
+        log "         once prediction starts. Set 'no_kernels: true' in the config."
     fi
 
     "$BOLTZ" predict "${BASE_DIR}/yamls" \

@@ -50,3 +50,31 @@ produce a ranking of 100 arbitrary catalogue entries.
 Median molecular weight 377 Da, median 27 heavy atoms, 9 of the 100 carry a
 PAINS flag — close to the 8.7 % of the full catalogue, as an untargeted sample
 should be.
+
+## Four of the 100 are salts, on purpose
+
+`demo_100.csv` contains four multi-fragment SMILES — 4 %, against 3.9 % in the
+full catalogue, so the sample is representative there too.
+
+**Boltz-2 2.2.1 does not predict them.** It reduces a multi-fragment input to
+its largest fragment, and RDKit 2025.9.2 aborts partway through:
+
+```
+RuntimeError: Pre-condition Violation
+        getNumImplicitHs() called without preceding call to calcImplicitValence()
+```
+
+Boltz reports `Failed to process … Skipping.` and continues, so the compound
+does not appear in the output at all and quietly vanishes from the ranking.
+
+This is not a demo-set artefact. In the screening run behind this pipeline,
+**all 306 multi-fragment compounds that passed the size filter came back
+without a prediction — every single one.** They account for 71 % of the 432
+compounds that the run lost between the 8,078 that passed filtering and the
+7,646 that produced predictions.
+
+They are left in deliberately: a demo set that quietly avoided the one input
+class the pipeline mishandles would be misleading. `01_generate_yamls.py` names
+them in a warning before the GPU run rather than after it. If you need salts
+predicted, desalt them first — the pipeline does not do it for you, because
+choosing which fragment to keep is a chemistry decision.

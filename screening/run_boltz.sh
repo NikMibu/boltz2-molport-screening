@@ -88,6 +88,15 @@ fi
 EXTRA=()
 if [ "$NO_KERNELS" = "True" ] || [ "$NO_KERNELS" = "true" ]; then
     EXTRA+=(--no_kernels)
+elif grep -qi microsoft /proc/version 2>/dev/null; then
+    # WSL's NVML has no nvmlDeviceGetNumGpuCores; the cuEquivariance kernels
+    # call it during import and the run dies with NVMLError_NotSupported after
+    # the model is already loaded. Cheaper to say so now than 45 seconds in.
+    echo "WARNING: this looks like WSL and no_kernels is false." >&2
+    echo "         Boltz's cuEquivariance kernels crash there with" >&2
+    echo "         'NVMLError_NotSupported' once prediction starts." >&2
+    echo "         Set 'no_kernels: true' in $(basename "$CONFIG")." >&2
+    echo "" >&2
 fi
 
 mkdir -p "$RESULTS_DIR"
