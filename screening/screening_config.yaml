@@ -4,12 +4,16 @@
 # with the isoform key (ca2, ca4, ca7).
 
 # --- Input compound table ---
-# Any CSV with a SMILES column and an ID column. The MolPort natural-product
-# library used in the thesis is proprietary and is NOT shipped here; the demo
-# set below is a public stand-in drawn from data/reference/.
+# Any CSV with a SMILES column and an ID column, annotated by
+# 00_characterize_dataset.py so that the size filters below have something to
+# work on.
+#
+# The default is the 100-compound demo set, not a screening library. The full
+# run of the thesis screened 8,963 MolPort natural products; those results are
+# not part of this repository. See data/demo/README.md.
 input_csv: data/demo/demo_100.csv
 smiles_column: smiles
-id_column: compound_id
+id_column: molport_number
 
 # --- Targets ---
 # hCA IV is screened against the MATURE sequence: the N-terminal signal peptide

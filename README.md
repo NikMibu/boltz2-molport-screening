@@ -1,32 +1,60 @@
 # Boltz-2 MolPort Screening
 
-Prospective virtual screening of a commercial natural-product library against
-human carbonic anhydrase isoforms (CA II, CA IV, CA VII) with **Boltz-2**,
-followed by constraint-based re-ranking with DiffDock and PLIP.
+Prospective virtual screening of a commercial compound catalogue against human
+carbonic anhydrase isoforms (CA II, CA IV, CA VII) with **Boltz-2**, followed by
+constraint-based re-ranking with DiffDock and PLIP.
 
-> **Code-only repository.** The screening library and every result derived from
-> it — predictions, rankings, hit lists — are proprietary and are not published
-> here. The code runs on any hit list with a `SMILES` column; see
-> [Input formats](#input-formats). Public reference data lives in
-> [`data/reference/`](data/reference/).
+## What this is built for, and what else it does
 
-## Status
+The pipeline was written for one job: take a **MolPort catalogue of purchasable
+small molecules**, predict binding affinity against a target, and rank the
+catalogue so that the top of the list can be ordered and tested. Everything is
+shaped around that — MolPort IDs as the compound key, a size filter matched to
+Boltz-2's affinity module, a two-stage score that discards low-confidence
+predictions rather than trusting a strong number, and a re-ranking stage that
+asks whether interaction constraints change the order.
+
+None of it is locked to that job. The input is a CSV: any SMILES column, any ID
+column, any source. The target is a FASTA plus an alignment, so any protein
+works. The three carbonic anhydrase isoforms are entries in a config, not
+assumptions in the code. Screening a different vendor catalogue against a
+different target means editing
+[`screening/screening_config.yaml`](screening/screening_config.yaml) and nothing
+else.
+
+What the pipeline does *not* do is decide what a good hit is. It ranks by
+predicted affinity under a confidence filter; whether that ranking means
+anything for your target is a question the [DUD-E benchmark
+repository](https://github.com/NikMibu/boltz2-dude-benchmark) addresses and this
+one does not.
+
+## Contents
 
 | | |
 |---|---|
-| [`screening/`](screening/) | YAML generation, MSA injection, Boltz-2 inference, ranking, isoform selectivity |
+| [`screening/`](screening/) | Dataset characterization, YAML generation, MSA injection, Boltz-2 inference, ranking, isoform selectivity |
+| [`constraints/`](constraints/) | DiffDock poses, PLIP contacts, constrained re-scoring |
 | [`analysis/`](analysis/) | Novelty and property comparison of a hit list against known hCA II inhibitors |
-| [`data/`](data/README.md) | Target sequences, alignments, apo receptor, ChEMBL reference set |
-| `constraints/` | *to follow* — DiffDock poses, PLIP contacts, constrained re-scoring |
+| [`data/`](data/README.md) | Target sequences, alignments, apo receptor, ChEMBL reference set, demo compounds |
+| `validate_setup.py` | Checks Boltz-2, micromamba, DiffDock, PLIP and the FASTA/MSA pairing before a long run |
+
+> **No screening results are published here.** The predictions, rankings and hit
+> lists produced during the thesis are not part of this repository. What ships
+> is the code and a 100-compound demo set so that both pipelines can be run
+> without a library of your own — see [`data/demo/`](data/demo/README.md).
 
 ## Screening
 
 ```bash
-# one isoform, five compounds, no GPU — checks the wiring
-bash run_screening.sh --target ca2 --input my_compounds.csv --limit 5 --skip-boltz
+# check the wiring: five compounds, one isoform, no GPU
+bash run_screening.sh --target ca2 --limit 5 --skip-boltz
 
-# all three isoforms, end to end
-bash run_screening.sh --target all --input my_compounds.csv
+# the demo set against all three isoforms, end to end
+bash run_screening.sh --target all
+
+# your own catalogue
+python3 screening/00_characterize_dataset.py --input mine.xlsx --out-dir data/
+bash run_screening.sh --target ca2 --input data/mine_properties.csv
 ```
 
 The wrapper runs YAML generation → MSA injection → `boltz predict` → prediction
@@ -83,6 +111,49 @@ Once all three are ranked, `screening/analyze_isoform_selectivity.py` compares
 the rank lists; `screening/14_plot_boltz_structure_quality.py` compares the
 structural confidence metrics across targets. Both take file paths and ship no
 data of their own.
+
+Adding a fourth target means adding a FASTA, an alignment built from that exact
+sequence, and four lines in the config. `validate_setup.py` checks that the two
+belong together.
+
+## Constraint re-ranking
+
+Does telling Boltz-2 *where* the ligand binds change which compounds come out on
+top? The second pipeline docks each hit with DiffDock, reads the contacts of the
+top-ranked pose with PLIP, writes them back as a Boltz-2 pocket constraint, and
+re-predicts every compound twice — once unconstrained, once constrained.
+
+```bash
+cp constraints/config.example.yaml constraints/config.yaml
+python3 validate_setup.py                       # DiffDock, PLIP, Boltz-2
+bash run_constraints.sh --smoke                 # 10 compounds, minutes
+bash run_constraints.sh                         # the real thing
+```
+
+| Stage | Script |
+|---|---|
+| SMILES → 3D conformer | `05_prepare_ligands_for_diffdock.py` |
+| DiffDock, 40 poses, top one kept | `06_run_diffdock.py` |
+| PLIP contacts → two YAMLs per compound | `07_generate_constraint_yamls.py` |
+| Compare the two rankings | `08_analyze_constraint_predictions.py` |
+
+Inference here runs at **3/200/5/200**, the Boltz-2 defaults — not the reduced
+settings of the screening stage. A hundred compounds can afford what nine
+thousand cannot.
+
+Two external tools are needed that the screening pipeline does not use, and
+neither is reliably on the `PATH`:
+
+```bash
+export DIFFDOCK_HOME=/path/to/DiffDock
+export MAMBA_EXE=/path/to/bin/micromamba   # micromamba installs as a shell
+                                           # function; subprocess cannot call it
+```
+
+`--smoke` cuts the input to 10 compounds, DiffDock to 4 poses and inference to
+1/10/1/10. That proves the chain runs and nothing else — at reduced sampling the
+poses are not trustworthy, so no conclusion about constraints should be drawn
+from a smoke run.
 
 ## Analyses
 

@@ -163,6 +163,10 @@ for T in $TARGETS; do
 
         # --- Step 1: Generate YAMLs ---
         log "--- Step 1: YAML generation ---"
+        # Nothing clears the folder, and boltz predicts everything it finds.
+        # YAMLs left over from an earlier input would be predicted alongside
+        # the current one and then show up as unmatched in step 4.
+        STALE_BEFORE=$(find "$YAML_DIR" -name '*.yaml' 2>/dev/null | wc -l)
         YAML_CMD=(python3 "${SCREENING}/01_generate_yamls.py"
                   --smiles-csv "$INPUT_CSV"
                   --smiles-column "$SMILES_COL"
@@ -184,6 +188,17 @@ for T in $TARGETS; do
 
         YAML_COUNT=$(find "$YAML_DIR" -name '*.yaml' | wc -l)
         log "$YAML_COUNT YAML(s) ready"
+
+        EXPECTED=$(python3 -c "
+import csv, sys
+n = sum(1 for _ in csv.DictReader(open('$INPUT_CSV', newline='')))
+print(min(n, ${LIMIT:-n}) if '${LIMIT}' else n)
+" 2>/dev/null || echo "")
+        if [ -n "$EXPECTED" ] && [ "$YAML_COUNT" -gt "$EXPECTED" ]; then
+            log "WARNING: $YAML_DIR holds $YAML_COUNT YAMLs but the input has $EXPECTED"
+            log "         compound(s). $((YAML_COUNT - EXPECTED)) file(s) are left over from an"
+            log "         earlier run and will be predicted too. Clear the folder first."
+        fi
 
         # --- Step 3: Boltz-2 inference ---
         if [ "$SKIP_BOLTZ" = true ]; then

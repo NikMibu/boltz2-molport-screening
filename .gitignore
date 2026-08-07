@@ -110,10 +110,13 @@ data/msa/*
 data/pdb/*
 !data/pdb/1CNC.pdb
 
-# Demo compound set — public vendor catalogue entries, see data/demo/README.md
+# Demo compound set — vendor catalogue entries, see data/demo/README.md.
+# Named one by one on purpose: a blanket "*.csv" here would override the
+# "molport*.csv" exclusion above and let the full annotated library through.
 !data/demo/
 data/demo/*
-!data/demo/*.csv
+!data/demo/demo_100.csv
+!data/demo/demo_10.csv
 !data/demo/README.md
 
 # Reference set folder, same rule
