@@ -1,12 +1,27 @@
 # Smoke test
 
-Exercises both pipelines end to end on the 100-compound demo set. Roughly an
-hour of wall clock on a single consumer GPU, most of it DiffDock.
-
 **Run it from a fresh clone, not from a working copy.** The point is to test
 what is actually on GitHub. A working copy quietly contains files that were
 never committed — that is how three sets of results in this project turned out
-to exist only locally.
+to exist only locally, and how a `set -e` bug survived every test until the
+first clone hit it.
+
+## Two different runs
+
+They serve different purposes and take wildly different amounts of time. Do the
+first one before committing to the second.
+
+| | Compounds | Parameters | Wall clock on an RTX 4060 Ti |
+|---|---|---|---|
+| **Smoke** `--smoke` | 5 per target | 1/10/1/10 | minutes |
+| **Demo** (no flag) | 100 per target | 2/50/1/50 | **~1.5 h per isoform, ~5 h for all three** |
+
+The smoke run answers "does the chain execute". Only the demo run produces
+output worth putting in `results/example/`, because at 1/10 the numbers mean
+nothing.
+
+Budget for the constraint pipeline on top: DiffDock dominates it, and the first
+invocation spends 5–10 silent minutes building lookup tables.
 
 ## 0. Clone and environment
 
@@ -54,31 +69,42 @@ built from the sequence it is paired with. hCA IV ships in a trimmed and an
 untrimmed form under the same UniProt header, and Boltz-2 accepts a mismatched
 pair without complaint.
 
-## 2. Screening — minutes
+## 2. Screening
+
+Start small:
 
 ```bash
 bash run_screening.sh --target ca2 --smoke
 ```
 
-Five compounds at 1/10/1/10. Expect a few minutes on an RTX 4060 Ti.
-
-Then all three isoforms at the real parameters:
+Five compounds at 1/10/1/10, a few minutes. If that produces a ranking, the
+wiring is sound and the long run is worth starting.
 
 ```bash
-bash run_screening.sh --target all
+bash run_screening.sh --target all      # ~5 h, see the table above
 ```
 
-100 compounds × 3 isoforms at 2/50/1/50. Budget around 30–60 minutes per
-isoform on a 16 GB consumer card.
+Expect four of the 100 compounds to be skipped per isoform with
+`Failed to process … Skipping.` — those are the multi-fragment SMILES that
+Boltz-2 2.2.1 cannot reduce. `01_generate_yamls.py` names them at the start of
+the run. This is expected; see [`data/demo/`](data/demo/README.md).
 
-**Check:**
+If the run is interrupted, the ranking can be redone from whatever predictions
+exist without re-running inference:
 
-- `results/ca2/predictions_ca2.csv` — 100 rows, `boltz_prob_mean` and
-  `boltz_pred_value_mean` populated
-- `results/ca2/ranking/ligands_ranked_full.csv` — `passes_confidence` true only
-  above 0.6, failures carry `combined_score` 999
-- step 4 reports no unmatched prediction folders
-- `results/*/ranking/boltz_predictions_distributions.png` exists
+```bash
+bash run_screening.sh --target ca2 --analysis-only
+```
+
+**Check, per isoform:**
+
+- `results/<t>/predictions_<t>.csv` — 100 rows, `boltz_prob_mean` and
+  `boltz_pred_value_mean` populated for ~96 of them
+- step 4 reports the skipped compounds as folders without `affinity_*.json`,
+  and **no unmatched folders**
+- `results/<t>/ranking/ligands_ranked_full.csv` — `passes_confidence` true only
+  at or above 0.6, failures carry `combined_score` 999, sorted ascending
+- `results/<t>/ranking/boltz_predictions_distributions.png` exists
 
 Then the isoform comparison:
 
@@ -128,17 +154,49 @@ on the floor. Nothing else.
 
 ## 5. Filling `results/example/`
 
-Once the full demo run is through, copy the outputs a reviewer should see
-without running anything:
+Once the **demo** run is through — not the smoke run; its numbers are
+meaningless — copy over what a reviewer should see without running anything.
+
+The `.gitignore` under `results/example/` admits only `README.md`, files
+matching `demo_*.csv`, and any `.png` or `.yaml`. Everything else stays out,
+including anything that looks like a real ranking. That is why the CSVs are
+renamed on the way in.
 
 ```bash
-cp results/ca2/ranking/ligands_ranked_full.csv   results/example/demo_ranked_full.csv
-cp results/ca2/ranking/ligands_ranked_top100.csv results/example/demo_ranked_top100.csv
-cp results/ca2/ranking/boltz_predictions_distributions.png results/example/
-cp results/constraints/ca2/analysis/constraint_comparison.png results/example/
-cp results/constraints/ca2/analysis/old_vs_new_comparison.png results/example/
+cd ~/boltz2-molport-screening
+
+# per-isoform rankings
+for t in ca2 ca4 ca7; do
+    cp "results/$t/ranking/ligands_ranked_full.csv"   "results/example/demo_${t}_ranked_full.csv"
+    cp "results/$t/ranking/ligands_ranked_top100.csv" "results/example/demo_${t}_ranked_top100.csv"
+    cp "results/$t/ranking/boltz_predictions_distributions.png" \
+       "results/example/${t}_predictions_distributions.png"
+done
+
+# isoform comparison (step 2)
+cp results/isoform_selectivity/*.png results/example/ 2>/dev/null
+
+# constraint re-ranking (step 3)
+cp results/constraints/ca2/analysis/constraint_comparison.png results/example/ 2>/dev/null
+cp results/constraints/ca2/analysis/old_vs_new_comparison.png results/example/ 2>/dev/null
 ```
 
-The `.gitignore` allows `results/example/README.md`, `demo_*.csv`, and any
-`.png` or `.yaml` beneath it — and nothing else. Run `git status` before
-committing and check that no ranking of a real hit list slipped in.
+Then check what would actually be committed, and commit:
+
+```bash
+git status --short
+git add results/example/ && git status --short --cached
+git commit -m "Add example outputs from the demo run"
+git push
+```
+
+Two things to verify in that `git status --cached` before pushing:
+
+- nothing named `ligands_ranked_*` — those are the raw names and must not
+  appear; if one does, the rename above was skipped
+- no `.csv` outside `results/example/demo_*`
+
+Finally, update [`results/example/README.md`](results/example/README.md): move
+the files from the "Not present yet" table into "Present", and record which run
+produced them — how many compounds, which parameters, which GPU. Without that
+line the numbers cannot be placed later.
