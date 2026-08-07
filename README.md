@@ -34,7 +34,7 @@ one does not.
 |---|---|
 | [`screening/`](screening/) | Dataset characterization, YAML generation, MSA injection, Boltz-2 inference, ranking, isoform selectivity |
 | [`constraints/`](constraints/) | DiffDock poses, PLIP contacts, constrained re-scoring |
-| [`analysis/`](analysis/) | Novelty and property comparison of a hit list against known hCA II inhibitors |
+| [`analysis/`](analysis/) | Novelty, property comparison and structural profiling of a hit list |
 | [`data/`](data/README.md) | Target sequences, alignments, apo receptor, ChEMBL reference set, demo compounds |
 | [`results/example/`](results/example/README.md) | Input and output formats, produced from the demo set |
 | `validate_setup.py` | Checks Boltz-2, micromamba, DiffDock, PLIP and the FASTA/MSA pairing before a long run |
@@ -44,6 +44,14 @@ one does not.
 > lists produced during the thesis are not part of this repository. What ships
 > is the code and a 100-compound demo set so that both pipelines can be run
 > without a library of your own — see [`data/demo/`](data/demo/README.md).
+
+The thesis also had a set of one-off scripts that produced the figures of its
+results chapter: parsing a purchase order, picking six compounds for a panel,
+rendering PyMOL scenes, laying tables out as images. Those are not here. They
+were written against a directory tree that no longer exists and answer no
+question a reader of this repository has. What was general in them — the
+chemical-space map, the contact matrix, and the mmCIF-to-PDB conversion — was
+lifted out into `analysis/hit_profile.py` and `constraints/cif_to_pdb.py`.
 
 ## Screening
 
@@ -142,6 +150,12 @@ bash run_constraints.sh                         # the real thing
 | PLIP contacts → two YAMLs per compound | `07_generate_constraint_yamls.py` |
 | Compare the two rankings | `08_analyze_constraint_predictions.py` |
 
+`constraints/cif_to_pdb.py` is a standalone helper for the other direction:
+Boltz-2 writes predicted complexes as mmCIF, PLIP reads PDB, and PDB allows one
+character per chain — Boltz chain names do not fit and the ligand is lost
+without renaming. Needed to run PLIP on a Boltz-2 prediction; the pipeline above
+runs it on DiffDock poses, which are already PDB.
+
 Inference here runs at **3/200/5/200**, the Boltz-2 defaults — not the reduced
 settings of the screening stage. A hundred compounds can afford what nine
 thousand cannot.
@@ -162,7 +176,7 @@ from a smoke run.
 
 ## Analyses
 
-All three take the hit list as an argument. None of them ship one.
+All four take the hit list as an argument. None of them ship one.
 
 ```bash
 # Structural novelty: max Tanimoto against known hCA II inhibitors
@@ -173,7 +187,20 @@ python analysis/smiles_overlap_check.py --hits my_hits.csv
 
 # Heavy-atom distribution: hits vs. known inhibitors vs. full library
 python analysis/heavy_atom_comparison.py --hits my_hits.csv --out-dir results/
+
+# Chemical space, internal diversity, and shared pocket contacts
+python analysis/hit_profile.py --hits my_hits.csv --out-dir results/ \
+    --plip-dir results/constraints/ca2/plip        # PLIP part is optional
 ```
+
+`hit_profile.py` answers the two questions worth asking about a ranking before
+ordering anything. **Are these one scaffold or many?** — Morgan fingerprints,
+a PCA map, and each hit's Tanimoto to its nearest neighbour *within the list*.
+A list whose nearest-neighbour similarities sit near 1.0 is the scoring function
+rewarding one motif. **Do they bind the same way?** — a compound-by-residue
+contact matrix from the PLIP reports. On the hCA II top 100 of this project the
+answer was Leu198, Phe131, Thr200 and Thr199 in 63–80 % of compounds, the
+canonical hydrophobic wall and gatekeeper residues of the site.
 
 `novelty_check.py` reports how many hits fall below a Tanimoto of 0.3 to every
 known inhibitor — the operational definition of "structurally novel" used

@@ -25,6 +25,13 @@ requests==2.32.3
 # Reading vendor catalogues in .xlsx (00_characterize_dataset.py)
 openpyxl==3.1.5
 
+# PCA of the fingerprint matrix (analysis/hit_profile.py). Only the decomposition
+# is used; no model is fitted anywhere in this repository.
+scikit-learn==1.6.1
+
+# mmCIF to PDB (constraints/cif_to_pdb.py). Boltz-2 writes mmCIF, PLIP reads PDB.
+gemmi==0.7.1
+
 # Stripping HETATM records from the apo receptor (constraints/06_run_diffdock.py)
 biopython==1.85
 
