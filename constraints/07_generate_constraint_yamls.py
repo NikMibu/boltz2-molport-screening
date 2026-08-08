@@ -255,7 +255,19 @@ def read_fasta_sequence(fasta_path: str) -> str:
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Generate Boltz-2 YAMLs with PLIP-based constraints"
+        description="Generate Boltz-2 YAMLs with PLIP-derived pocket constraints",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Two distances are involved and they are easy to confuse:
+
+  PLIP binding-site radius   which residues count as contacts. This script
+                             passes no distance argument, so PLIP uses its own
+                             default (BS_DIST, 7.5 A in 2.3.x).
+  --max-distance             how far Boltz-2 may place the binder from those
+                             contacts. Written into the YAML. Default 6.0.
+
+Only the second one is set here.
+"""
     )
     parser.add_argument(
         "--config",
@@ -292,7 +304,9 @@ def main():
     parser.add_argument(
         "--max-distance",
         type=float,
-        help="Max distance for constraints (Angstrom)"
+        help="max_distance of the Boltz-2 pocket constraint, in Angstrom. "
+             "NOT a PLIP setting: PLIP is invoked without a distance argument "
+             "and detects contacts at its own default radius. (default: 6.0)"
     )
     parser.add_argument(
         "--constraint-type",
@@ -359,13 +373,18 @@ def main():
     print(f"\n{'='*70}")
     print(f"  PLIP ANALYSIS & CONSTRAINT YAML GENERATION")
     print(f"{'='*70}\n")
-    print(f"Input:       {input_csv}")
-    print(f"FASTA:       {fasta_path}")
-    print(f"YAMLs:       {output_dir}")
-    print(f"PLIP:        {plip_output}")
-    print(f"Ligands:     {len(df)}")
-    print(f"Type:        {constraint_type}")
-    print(f"Max dist:    {max_distance} Å\n")
+    print(f"Input:            {input_csv}")
+    print(f"FASTA:            {fasta_path}")
+    print(f"YAMLs:            {output_dir}")
+    print(f"PLIP reports:     {plip_output}")
+    print(f"Ligands:          {len(df)}")
+    print(f"Constraint type:  {constraint_type}")
+    print()
+    print(f"PLIP detection:   default binding-site radius (BS_DIST, 7.5 A in PLIP 2.3.x)")
+    print(f"                  no distance argument is passed to plip")
+    print(f"Boltz max_distance: {max_distance} A")
+    print(f"                  written into the pocket constraint; how far the")
+    print(f"                  binder may sit from the contacts PLIP found\n")
     
     yaml_default_paths = []
     yaml_pocket_paths = []
