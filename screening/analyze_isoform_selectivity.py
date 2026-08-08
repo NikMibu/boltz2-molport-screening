@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Analyze isoform selectivity and overlap between CA2, CA4, and CA7."""
 import argparse
+import sys
 import os
 import pandas as pd
 import numpy as np
@@ -69,8 +70,15 @@ def calculate_selectivity(merged: pd.DataFrame) -> pd.DataFrame:
     df['score_mean'] = scores.mean(axis=1)
     df['score_std'] = scores.std(axis=1)
     
-    # Identify best isoform (LOWEST score = best)
-    df['best_isoform'] = scores.idxmin(axis=1).str.replace('_score', '').str.upper()
+    # Identify best isoform (LOWEST score = best).
+    # A compound that failed QC in all three isoforms has an all-NA row, which
+    # pandas still answers for today but warns about and will raise on. Those
+    # rows genuinely have no best isoform, so they are excluded first.
+    has_any = scores.notna().any(axis=1)
+    df['best_isoform'] = pd.Series(pd.NA, index=df.index, dtype=object)
+    df.loc[has_any, 'best_isoform'] = (
+        scores[has_any].idxmin(axis=1).str.replace('_score', '').str.upper()
+    )
     df['best_score'] = df['min_score']
     
     # Calculate selectivity ratio (second_best / best)
@@ -103,8 +111,11 @@ def calculate_selectivity(merged: pd.DataFrame) -> pd.DataFrame:
     # Count valid isoforms (exclude flagged)
     df['isoform_count'] = scores.notna().sum(axis=1)
     
-    # Calculate worst isoform (for comparison)
-    df['worst_isoform'] = scores.idxmax(axis=1).str.replace('_score', '').str.upper()
+    # Calculate worst isoform (for comparison), same all-NA guard
+    df['worst_isoform'] = pd.Series(pd.NA, index=df.index, dtype=object)
+    df.loc[has_any, 'worst_isoform'] = (
+        scores[has_any].idxmax(axis=1).str.replace('_score', '').str.upper()
+    )
     df['worst_score'] = df['max_score']
     
     return df
@@ -112,6 +123,16 @@ def calculate_selectivity(merged: pd.DataFrame) -> pd.DataFrame:
 
 def identify_overlap(merged: pd.DataFrame, top_n: int = 100) -> Dict:
     """Identify overlap between top N compounds of each isoform."""
+    # The overlap only says something if top_n is well below the list length.
+    # Comparing the top 100 of three 100-compound lists returns 100 % overlap by
+    # construction, which reads like a finding and is not one.
+    if top_n >= len(merged):
+        print(
+            f"\nWARNING: --top-n is {top_n} and the lists hold {len(merged)} compounds.\n"
+            f"         Every compound is in every top-N, so the overlap below is\n"
+            f"         100 % by construction and means nothing. Lower --top-n.",
+            file=sys.stderr,
+        )
     # Get top N for each isoform
     top_ca2 = set(merged.nsmallest(top_n, 'ca2_rank')['molport_number'].dropna())
     top_ca4 = set(merged.nsmallest(top_n, 'ca4_rank')['molport_number'].dropna())
