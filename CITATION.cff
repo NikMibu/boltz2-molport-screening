@@ -1,0 +1,133 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below - and cite Boltz-2, DiffDock and PLIP (see references)."
+title: "Boltz-2 MolPort Screening"
+abstract: >-
+  Prospective virtual screening of a commercial compound catalogue against
+  human carbonic anhydrase isoforms II, IV and VII with Boltz-2, followed by
+  constraint-based re-ranking of the top hits: DiffDock poses, PLIP interaction
+  profiles, and re-prediction with and without the resulting pocket constraint.
+  Ranks by a two-stage score that discards low-confidence predictions before
+  ordering by predicted affinity. Code only - the screening library and its
+  results are not part of the repository; a 100-compound public demo set is
+  included so both pipelines can be run end to end.
+type: software
+authors:
+  - family-names: "Mitterbuchner"
+    given-names: "Niklas"
+    email: "26430420+NikMibu@users.noreply.github.com"
+    # orcid: "https://orcid.org/0000-0000-0000-0000"
+license: MIT
+repository-code: "https://github.com/NikMibu/boltz2-molport-screening"
+version: "1.0.0"
+date-released: "2026-08-08"
+keywords:
+  - boltz-2
+  - virtual-screening
+  - drug-discovery
+  - natural-products
+  - carbonic-anhydrase
+  - diffdock
+  - plip
+  - structural-constraints
+
+references:
+  - type: article
+    title: "Boltz-2: Towards Accurate and Efficient Binding Affinity Prediction"
+    journal: "bioRxiv"
+    year: 2025
+    doi: "10.1101/2025.06.14.659707"
+    authors:
+      - family-names: "Passaro"
+        given-names: "Saro"
+      - family-names: "Corso"
+        given-names: "Gabriele"
+      - family-names: "Wohlwend"
+        given-names: "Jeremy"
+    notes: "Co-folding and affinity prediction model (version 2.2.1). Produces every number this pipeline ranks on."
+
+  - type: article
+    title: "DiffDock: Diffusion Steps, Twists, and Turns for Molecular Docking"
+    conference:
+      name: "International Conference on Learning Representations (ICLR)"
+    year: 2023
+    doi: "10.48550/arXiv.2210.01776"
+    authors:
+      - family-names: "Corso"
+        given-names: "Gabriele"
+      - family-names: "Stärk"
+        given-names: "Hannes"
+      - family-names: "Jing"
+        given-names: "Bowen"
+      - family-names: "Barzilay"
+        given-names: "Regina"
+      - family-names: "Jaakkola"
+        given-names: "Tommi"
+    notes: "Version 1.1. Generates the poses the interaction constraints are read from."
+
+  - type: article
+    title: "PLIP 2021: Expanding the Scope of the Protein-Ligand Interaction Profiler to DNA and RNA"
+    journal: "Nucleic Acids Research"
+    volume: 49
+    issue: W1
+    start: W530
+    end: W534
+    year: 2021
+    doi: "10.1093/nar/gkab294"
+    authors:
+      - family-names: "Adasme"
+        given-names: "Melissa F."
+      - family-names: "Linnemann"
+        given-names: "Katja L."
+      - family-names: "Bolz"
+        given-names: "Sarah N."
+      - family-names: "Kaiser"
+        given-names: "Florian"
+      - family-names: "Salentin"
+        given-names: "Sebastian"
+      - family-names: "Haupt"
+        given-names: "V. Joachim"
+      - family-names: "Schroeder"
+        given-names: "Michael"
+    notes: >-
+      Version 2.3.1. Contacts are read from its reports at its default
+      binding-site radius; no distance argument is passed.
+
+  - type: article
+    title: "The ChEMBL Database in 2023: a drug discovery platform spanning multiple bioactivity data types and time periods"
+    journal: "Nucleic Acids Research"
+    volume: 52
+    issue: D1
+    start: D1180
+    end: D1192
+    year: 2024
+    doi: "10.1093/nar/gkad1004"
+    authors:
+      - family-names: "Zdrazil"
+        given-names: "Barbara"
+      - family-names: "Felix"
+        given-names: "Eloy"
+      - family-names: "Hunter"
+        given-names: "Fiona"
+    notes: >-
+      Source of data/reference/known_ca2_inhibitors.csv, the reference set the
+      novelty and property analyses compare a hit list against. CC BY-SA 3.0.
+
+  - type: software
+    title: "RDKit: Open-source cheminformatics"
+    version: "2025.9.2"
+    repository-code: "https://github.com/rdkit/rdkit"
+    notes: >-
+      Property calculation, PAINS flagging, fingerprints and 3D embedding. The
+      version matters: NumHAcceptors and NumRotatableBonds shift between
+      releases.
+
+# Sister repositories from the same work
+# ------------------------------------------------------------------
+#   https://github.com/NikMibu/boltz2-dude-benchmark
+#     Retrospective validation of Boltz-2 affinity prediction on DUD-E for the
+#     same target. Answers whether the ranking this repository produces can be
+#     trusted at all.
+#
+#   https://github.com/NikMibu/plip_constraints_pipeline
+#     The same constraint idea benchmarked against 200 experimental co-crystal
+#     structures, where the true pose is known and RMSD can be measured.

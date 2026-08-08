@@ -4,6 +4,42 @@ Prospective virtual screening of a commercial compound catalogue against human
 carbonic anhydrase isoforms (CA II, CA IV, CA VII) with **Boltz-2**, followed by
 constraint-based re-ranking with DiffDock and PLIP.
 
+```mermaid
+flowchart TD
+    CAT[Vendor catalogue<br/>SMILES + IDs]
+    CAT --> P0["<b>00</b> characterize<br/>MW, logP, heavy atoms, PAINS"]
+    P0 --> FILT{"MW &le; 700<br/>heavy atoms &le; 56"}
+    FILT --> P1["<b>01</b> generate YAMLs<br/>one per compound"]
+    FASTA[FASTA + MSA<br/>per isoform] --> P1
+    P1 --> P2["<b>02</b> inject MSA path"]
+    P2 --> BOLTZ["boltz predict<br/>2/50/1/50"]
+    BOLTZ --> P3["<b>03</b> collect predictions"]
+    P3 --> QC{"boltz_prob_mean<br/>&ge; 0.6 ?"}
+    QC -- no --> SENT["score 999<br/>dropped"]
+    QC -- yes --> RANK["<b>04</b> rank by<br/>pred_value - 0.1 x prob"]
+    RANK --> HITS[(Hit list)]
+
+    HITS --> ISO["isoform selectivity<br/>CA II / IV / VII"]
+    HITS --> PROF["hit_profile<br/>chemical space, contacts"]
+    HITS --> NOV["novelty vs. known<br/>inhibitors"]
+
+    HITS --> C5["<b>05</b> SMILES to 3D"]
+    C5 --> C6["<b>06</b> DiffDock<br/>40 poses, top one kept"]
+    PDB[Apo receptor<br/>1CNC] --> C6
+    C6 --> C7["<b>07</b> PLIP contacts<br/>to pocket constraint"]
+    C7 --> BOLTZ2["boltz predict x2<br/>3/200/5/200<br/>default and pocket"]
+    BOLTZ2 --> C8["<b>08</b> compare<br/>the two rankings"]
+
+    classDef stage fill:#e8f0fe,stroke:#4a6fa5,color:#1a1a1a
+    classDef gate fill:#fff4e0,stroke:#c9821a,color:#1a1a1a
+    classDef data fill:#f2f2f2,stroke:#888,color:#1a1a1a
+    class P0,P1,P2,P3,RANK,C5,C6,C7,C8,ISO,PROF,NOV stage
+    class FILT,QC gate
+    class CAT,FASTA,PDB,HITS,BOLTZ,BOLTZ2,SENT data
+```
+
+`run_screening.sh` covers the upper half, `run_constraints.sh` the lower.
+
 ## What this is built for, and what else it does
 
 The pipeline was written for one job: take a **MolPort catalogue of purchasable
@@ -44,6 +80,35 @@ one does not.
 > lists produced during the thesis are not part of this repository. What ships
 > is the code and a 100-compound demo set so that both pipelines can be run
 > without a library of your own — see [`data/demo/`](data/demo/README.md).
+
+## What it produces
+
+Everything below came from the shipped demo set: 100 arbitrary catalogue
+compounds against hCA II, hCA IV and hCA VII. **Not a screening result** — the
+compounds were not selected and the ranking says nothing about carbonic
+anhydrase. It is what the output looks like.
+
+![Boltz-2 predictions for hCA II](results/example/ca2_predictions_distributions.png)
+
+Binding probability, predicted affinity and combined score across the set, plus
+the confidence-vs-affinity plane the two-stage score cuts through. Ten of the
+100 clear the QC threshold — an untargeted sample of natural products screened
+against one enzyme mostly should not.
+
+![Isoform selectivity](results/example/isoform_selectivity_analysis.png)
+
+Score agreement and selectivity across the three isoforms. With 100 compounds
+this is a demonstration of the analysis, not a finding; the statistics need a
+library.
+
+![Constrained vs. unconstrained ranking](results/example/constraint_comparison.png)
+
+The same compounds predicted twice, once free and once held to the pocket
+contacts PLIP found in the DiffDock pose. Whether that changes the order is the
+question [`run_constraints.sh`](run_constraints.sh) exists to answer.
+
+More, including what each number does and does not mean, in
+[`results/example/`](results/example/README.md).
 
 ## Screening
 
@@ -228,10 +293,14 @@ bottom of that file and [`SMOKE_TEST.md`](SMOKE_TEST.md).
 
 ## Related repositories
 
+This is one of three from the same work. Each answers a different question about
+the same model and target.
+
 | | |
 |---|---|
-| [`boltz2-dude-benchmark`](https://github.com/NikMibu/boltz2-dude-benchmark) | Retrospective validation of Boltz-2 affinity prediction on DUD-E |
-| [`plip_constraints_pipeline`](https://github.com/NikMibu/plip_constraints_pipeline) | Interaction-constrained co-folding, benchmarked against crystal poses |
+| [`boltz2-dude-benchmark`](https://github.com/NikMibu/boltz2-dude-benchmark) | **Can the ranking be trusted?** Retrospective validation on DUD-E: 492 known hCA II actives against 31,172 property-matched decoys, classification and regression metrics. |
+| **this repository** | **What does it find?** Prospective screening of a vendor catalogue against three isoforms, and whether interaction constraints change the order. |
+| [`plip_constraints_pipeline`](https://github.com/NikMibu/plip_constraints_pipeline) | **Do the constraints help?** The same idea benchmarked against 200 experimental co-crystal structures, where the true pose is known and RMSD can be measured. |
 
 ## Licence
 
