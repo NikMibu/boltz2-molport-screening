@@ -84,4 +84,4 @@ bash run_screening.sh --target ca2 --smoke   # 5 compounds, minutes
 bash run_screening.sh --target ca2           # 100 compounds at 2/50/1/50
 ```
 
-See [`SMOKE_TEST.md`](../../SMOKE_TEST.md) for the full sequence.
+[`SMOKE_TEST.md`](../../SMOKE_TEST.md) has the full sequence and the runtimes.
