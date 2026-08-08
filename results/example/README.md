@@ -1,22 +1,68 @@
 # Example outputs
 
-Produced from [`data/demo/`](../../data/demo/README.md) — 100 arbitrary vendor
-catalogue compounds — so that the input and output formats are visible without
-running anything. **No screening result of the thesis is reproduced here**, and
-nothing in this folder says anything about which compounds bind carbonic
-anhydrase.
+Produced by running both pipelines over [`data/demo/`](../../data/demo/README.md)
+— 100 arbitrary vendor catalogue compounds — so that the formats and the shape
+of the output are visible without running anything.
 
-## Present
+**These are not the results of the thesis.** The compounds were not selected,
+the target was not chosen for them, and nothing here says anything about which
+molecules bind carbonic anhydrase. What the numbers demonstrate is that the
+pipeline runs and that its filters do something.
+
+## The run behind these files
+
+| | |
+|---|---|
+| Input | `data/demo/demo_100.csv` — 100 compounds; `demo_10.csv` for the constraint stage |
+| Screening | 2/50/1/50, QC threshold 0.6, per isoform |
+| Constraints | 40 DiffDock poses per ligand, then 3/200/5/200 over both YAML variants |
+| Hardware | single NVIDIA RTX 4060 Ti (16 GB), WSL2, `no_kernels: true` |
+| Wall clock | ~5 h for the three isoforms, ~35 min for the constraint stage on 10 compounds |
+| Versions | Boltz-2 2.2.1, PLIP 2.3.1, RDKit 2025.9.2 |
+
+## Files
 
 | | Produced by |
 |---|---|
-| `yaml_example/*.yaml` | `screening/01_generate_yamls.py` — two Boltz-2 inputs, one per compound |
-| `demo_100_properties_distributions.png` | `screening/00_characterize_dataset.py --plot` |
+| `demo_ca2_ranked_full.csv`, `demo_ca4_…`, `demo_ca7_…` | `04_analyze_ligand_predictions.py` |
+| `ca2_predictions_distributions.png`, `ca4_…`, `ca7_…` | same |
+| `isoform_selectivity_analysis.png`, `isoform_overlap_bar.png` | `analyze_isoform_selectivity.py` |
+| `constraint_comparison.png` | `08_analyze_constraint_predictions.py` |
+| `demo_100_properties_distributions.png` | `00_characterize_dataset.py --plot` |
+| `yaml_example/*.yaml` | `01_generate_yamls.py` |
 
-### The Boltz-2 input format
+There is no `*_ranked_top100.csv`: the demo list is 100 compounds long, so the
+top 100 is the same file.
 
-One YAML per compound. The protein is identical across the file set; only the
-ligand block changes.
+## What the numbers show
+
+**95 of 100 compounds produced a prediction**, identically in all three
+isoforms. The five that did not are listed in the CSVs with empty prediction
+columns:
+
+| | |
+|---|---|
+| 4 compounds | multi-fragment SMILES (salts) — Boltz-2 2.2.1 cannot reduce them, see [`data/demo/`](../../data/demo/README.md) |
+| `MolPort-001-739-307` | a single-fragment polyketide that failed for another reason |
+
+**Ten, nine and eleven compounds pass the confidence QC** for hCA II, hCA IV and
+hCA VII. That is the point of the threshold: an untargeted sample of natural
+products screened against one enzyme should mostly not clear it. The highest
+binding probability in the hCA II set is 0.714, and the 90 compounds below 0.6
+carry the sentinel score 999 regardless of their predicted affinity — including
+one whose predicted affinity is the best in the whole set.
+
+**The isoform overlap is 100 % and means nothing here.** Comparing the top 100
+of three 100-compound lists returns every compound three times by construction.
+`analyze_isoform_selectivity.py` says so before printing the number. The
+selectivity statistics rest on the 8 compounds that clear QC in more than one
+isoform, which is too few to read anything into. Demonstrating that analysis
+needs a real library; these files only show that it runs and what it emits.
+
+## The Boltz-2 input format
+
+One YAML per compound, in `yaml_example/`. The protein block is identical across
+the set; only the ligand changes.
 
 ```yaml
 version: 1
@@ -36,12 +82,12 @@ properties:
       binder: "L1"
 ```
 
-Three things matter here and are easy to get wrong:
+Three things here are easy to get wrong:
 
 - **`msa:` is an absolute path.** Boltz-2 resolves it as written, so a YAML set
-  moved between machines has to be repointed — that is what
-  `02_update_msa.py` is for. Without the field, Boltz-2 falls back to its MSA
-  server and makes one round trip per compound.
+  moved between machines has to be repointed — that is what `02_update_msa.py`
+  is for. Without the field, Boltz-2 falls back to its MSA server and makes one
+  round trip per compound.
 - **The ligand `id` is a running counter (`L1`, `L2`, …), not the compound ID.**
   Boltz truncates chain names at five characters. The compound ID lives in the
   *filename*, which is what `03_make_boltz_predictions_summary.py` matches on.
@@ -63,25 +109,8 @@ constraints:
 ```
 
 The contact list comes from PLIP, run on the top-ranked DiffDock pose at PLIP's
-default binding-site radius of 7.5 Å. `max_distance` is a *Boltz-2* parameter —
-how far the binder may sit from those residues — and is not a PLIP setting.
+default binding-site radius. `max_distance` is a *Boltz-2* parameter — how far
+the binder may sit from those residues — and is not a PLIP setting.
 
-No constraint example is checked in: producing one needs DiffDock and PLIP, and
-the poses would be specific to whatever hit list was fed in.
-
-## Not present yet
-
-The ranking outputs need a GPU pass over the demo set:
-
-| | Produced by |
-|---|---|
-| `demo_ranked_full.csv`, `demo_ranked_top100.csv` | `04_analyze_ligand_predictions.py` |
-| `boltz_predictions_distributions.png` | same |
-| `constraint_comparison.png`, `old_vs_new_comparison.png` | `08_analyze_constraint_predictions.py` |
-
-```bash
-bash run_screening.sh --target ca2 --smoke   # 5 compounds, minutes
-bash run_screening.sh --target ca2           # 100 compounds at 2/50/1/50
-```
-
-[`SMOKE_TEST.md`](../../SMOKE_TEST.md) has the full sequence and the runtimes.
+No constraint example is checked in: the poses would be specific to whichever
+hit list was fed in.

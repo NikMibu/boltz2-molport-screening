@@ -87,10 +87,11 @@ wiring is sound and the long run is worth starting.
 bash run_screening.sh --target all      # ~5 h, see the table above
 ```
 
-Expect four of the 100 compounds to be skipped per isoform with
-`Failed to process … Skipping.` — those are the multi-fragment SMILES that
-Boltz-2 2.2.1 cannot reduce. `01_generate_yamls.py` names them at the start of
-the run. This is expected; see [`data/demo/`](data/demo/README.md).
+Expect five of the 100 compounds to be skipped per isoform with
+`Failed to process … Skipping.` — four are the multi-fragment SMILES that
+Boltz-2 2.2.1 cannot reduce, which `01_generate_yamls.py` names at the start of
+the run; the fifth is a large polyketide that fails for another reason. This is
+expected; see [`data/demo/`](data/demo/README.md).
 
 If the run is interrupted, the ranking can be redone from whatever predictions
 exist without re-running inference:
@@ -102,7 +103,7 @@ bash run_screening.sh --target ca2 --analysis-only
 **Check, per isoform:**
 
 - `results/<t>/predictions_<t>.csv` — 100 rows, `boltz_prob_mean` and
-  `boltz_pred_value_mean` populated for ~96 of them
+  `boltz_pred_value_mean` populated for 95 of them
 - step 4 reports the skipped compounds as folders without `affinity_*.json`,
   and **no unmatched folders**
 - `results/<t>/ranking/ligands_ranked_full.csv` — `passes_confidence` true only
