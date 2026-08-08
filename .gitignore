@@ -138,4 +138,6 @@ results/example/*
 !results/example/README.md
 !results/example/**/*.yaml
 !results/example/**/*.png
-!results/example/demo_*.csv
+# CSVs by exact shape, not "demo_*.csv": a top-N export of a 100-compound demo
+# list is byte-identical to the full one, and a blanket rule kept re-adding it.
+!results/example/demo_*_ranked_full.csv
