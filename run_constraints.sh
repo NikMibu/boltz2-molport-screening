@@ -136,16 +136,25 @@ if [ ! -f "$INPUT_CSV" ]; then
     exit 1
 fi
 
-# In smoke mode, work on a truncated copy so the config's input stays untouched.
-WORK_CSV="$INPUT_CSV"
+# Work on a copy inside the output folder, never on the file the config points
+# at. 05 and 07 derive their intermediate CSVs from the input path
+# (<stem>_with_sdf.csv, then _with_diffdock.csv), so running on the original
+# would drop intermediates next to it — into data/demo/ for the shipped set.
+mkdir -p "$BASE_DIR"
+WORK_CSV="${BASE_DIR}/input.csv"
 if [ "$SMOKE" = true ]; then
-    mkdir -p "$BASE_DIR"
     WORK_CSV="${BASE_DIR}/smoke_input.csv"
-    python3 - "$INPUT_CSV" "$WORK_CSV" "$N_LIGANDS" <<'PY'
+fi
+if [ "$SMOKE" = true ] || [ ! -f "$WORK_CSV" ] || [ "$INPUT_CSV" -nt "$WORK_CSV" ]; then
+    python3 - "$INPUT_CSV" "$WORK_CSV" "${N_LIGANDS:-0}" <<'PY'
 import sys, pandas as pd
-df = pd.read_csv(sys.argv[1]).head(int(sys.argv[3]))
+df = pd.read_csv(sys.argv[1])
+n = int(sys.argv[3])
+if n > 0:
+    df = df.head(n)
 df.to_csv(sys.argv[2], index=False)
-print(f"smoke input: {len(df)} ligand(s) -> {sys.argv[2]}")
+label = "smoke input" if n > 0 else "input"
+print(f"{label}: {len(df)} ligand(s) -> {sys.argv[2]}")
 PY
 fi
 

@@ -7,7 +7,11 @@ compound library of your own. Nothing here was selected, ranked or predicted.
 | File | Compounds | Used by |
 |---|---|---|
 | `demo_100.csv` | 100 | `run_screening.sh` |
-| `demo_10.csv` | 10, a subset of the above | `run_constraints.sh --smoke` |
+| `demo_10.csv` | 10, a subset of the above | `run_constraints.sh` |
+
+The constraint pipeline gets the smaller set on purpose: it docks 40 poses per
+ligand and then predicts every compound twice at 3/200/5/200, so ten compounds
+there cost about what a hundred cost in the screening stage.
 
 ## Provenance
 

@@ -16,9 +16,14 @@ target:
 # --- Input ---
 # In the thesis this is the top-100 list from the hCA II screen. That list is
 # derived from the proprietary library and is not shipped; point this at your
-# own ranking, or at the demo set.
+# own ranking.
+#
+# The default is the 10-compound demo set, not the 100-compound one. This stage
+# docks 40 poses per ligand and then predicts every compound twice at
+# 3/200/5/200 — an order of magnitude more expensive per compound than the
+# screening stage. Ten is a demonstration; a hundred is most of a day.
 input:
-  csv_path: "./data/demo/demo_100.csv"
+  csv_path: "./data/demo/demo_10.csv"
   smiles_column: "smiles"
   id_column: "molport_number"
 

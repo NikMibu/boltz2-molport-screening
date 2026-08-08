@@ -6,22 +6,25 @@ never committed — that is how three sets of results in this project turned out
 to exist only locally, and how a `set -e` bug survived every test until the
 first clone hit it.
 
-## Two different runs
+## Four runs, two purposes
 
-They serve different purposes and take wildly different amounts of time. Do the
-first one before committing to the second.
+Each pipeline has a smoke variant and a full one. They differ by two orders of
+magnitude in cost. Do the smoke variant before committing to the full one.
 
-| | Compounds | Parameters | Wall clock on an RTX 4060 Ti |
-|---|---|---|---|
-| **Smoke** `--smoke` | 5 per target | 1/10/1/10 | minutes |
-| **Demo** (no flag) | 100 per target | 2/50/1/50 | **~1.5 h per isoform, ~5 h for all three** |
+| | | Compounds | Parameters | Wall clock on an RTX 4060 Ti |
+|---|---|---|---|---|
+| Screening | `--smoke` | 5 per target | 1/10/1/10 | minutes |
+| Screening | full | 100 per target | 2/50/1/50 | ~1.5 h per isoform, **~5 h for all three** |
+| Constraints | `--smoke` | 3, 4 poses each | 1/10/1/10 | minutes, plus the first-run table build |
+| Constraints | full | 10, 40 poses each | 3/200/5/200 | **2–3 h** |
 
-The smoke run answers "does the chain execute". Only the demo run produces
+The smoke runs answer "does the chain execute". Only the full runs produce
 output worth putting in `results/example/`, because at 1/10 the numbers mean
 nothing.
 
-Budget for the constraint pipeline on top: DiffDock dominates it, and the first
-invocation spends 5–10 silent minutes building lookup tables.
+Note the constraint stage costs far more per compound: every compound is
+predicted twice, at four times the sampling of the screening stage. Ten
+compounds there are comparable to a hundred here.
 
 ## 0. Clone and environment
 
@@ -116,15 +119,34 @@ python3 screening/analyze_isoform_selectivity.py \
     --out-dir results/isoform_selectivity
 ```
 
-## 3. Constraints — the long half
+## 3. Constraints
 
 ```bash
 cp constraints/config.example.yaml constraints/config.yaml
-# edit input.csv_path -> ./data/demo/demo_10.csv
+sed -i 's/^no_kernels: false/no_kernels: true/' constraints/config.yaml   # WSL only
 bash run_constraints.sh --smoke
 ```
 
-10 compounds, 4 DiffDock poses each, inference at 1/10/1/10.
+One command, five steps: 3D ligands, DiffDock, PLIP, Boltz-2 over both YAML
+variants, comparison. `--smoke` cuts it to 3 compounds, 4 poses each, inference
+at 1/10/1/10 — minutes once the lookup tables are built.
+
+Then the real demo run:
+
+```bash
+bash run_constraints.sh
+```
+
+10 compounds, 40 poses each, 20 YAMLs at 3/200/5/200. **Budget 2-3 hours.**
+Per compound this stage costs an order of magnitude more than screening: twice
+the predictions, at four times the sampling.
+
+Individual steps can be re-run without repeating the expensive ones:
+
+```bash
+bash run_constraints.sh --steps analyze
+bash run_constraints.sh --steps plip,boltz,analyze
+```
 
 **The first DiffDock run builds its SO(3) lookup tables. That takes 5–10 minutes
 and produces no output — it is not hung.**
