@@ -43,9 +43,9 @@ pip install -r requirements.txt
 Point at the three external tools. None of them is reliably on the `PATH`:
 
 ```bash
-export BOLTZ_EXE=/mnt/e/master_thesis/exp_env/bin/boltz
-export MAMBA_EXE=/mnt/e/master_thesis/bin/micromamba
-export DIFFDOCK_HOME=/mnt/e/master_thesis/DiffDock
+export BOLTZ_EXE=/path/to/boltz-env/bin/boltz
+export MAMBA_EXE=/path/to/bin/micromamba
+export DIFFDOCK_HOME=/path/to/DiffDock
 ```
 
 `micromamba` in particular: the standard install defines a shell *function* and
