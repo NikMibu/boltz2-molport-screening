@@ -305,3 +305,8 @@ the same model and target.
 ## Licence
 
 MIT, see [LICENSE](LICENSE). ChEMBL reference data under CC BY-SA 3.0.
+The demo compounds in [`data/demo/`](data/demo/) are not covered by the MIT
+licence: they are a 100-compound sample of the MolPort catalogue, shared for
+non-commercial research use under
+[CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/), source:
+[MolPort](https://www.molport.com). See [`data/demo/README.md`](data/demo/README.md#licence).

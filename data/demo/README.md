@@ -82,3 +82,14 @@ class the pipeline mishandles would be misleading. `01_generate_yamls.py` names
 them in a warning before the GPU run rather than after it. If you need salts
 predicted, desalt them first — the pipeline does not do it for you, because
 choosing which fragment to keep is a chemistry decision.
+
+## Licence
+
+The MolPort IDs and SMILES in `demo_100.csv` and `demo_10.csv` come from the
+[MolPort](https://www.molport.com) compound catalogue and remain MolPort's
+data. They are **not** covered by the repository's MIT licence. They are
+redistributed in this small sample for non-commercial research use only, under
+[CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/), with
+attribution to MolPort — the terms under which MolPort itself publishes its
+in-stock database. Commercial use or redistribution requires permission from
+MolPort. The computed property columns are covered by the MIT licence.
